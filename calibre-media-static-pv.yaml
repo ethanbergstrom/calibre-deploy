@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: calibre-media-static-pv
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 3Ti
+  csi:
+    driver: cephfs.csi.ceph.com
+    nodeStageSecretRef:
+      # node stage secret name
+      name: csi-cephfs-secret
+      # node stage secret namespace where above secret is created
+      namespace: ceph-system
+    volumeAttributes:
+      # Required options from storageclass parameters need to be added in volumeAttributes
+      "clusterID": "75990333-6483-4bcc-a0ce-649258b3300b"
+      "fsName": "kubernetes-shared"
+      "staticVolume": "true"
+      "rootPath": /volumes/static/media-volume/a3e6d4ca-0ea8-46e1-ac01-e54fb20afc51
+    # volumeHandle can be anything, need not to be same
+    # as PV name or volume name. keeping same for brevity
+    volumeHandle: calibre-media-static-pv
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem

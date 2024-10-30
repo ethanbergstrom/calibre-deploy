@@ -1,0 +1,153 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: calibre
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: static-media-claim
+  namespace: calibre
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 3Ti
+  volumeMode: Filesystem
+  volumeName: calibre-media-static-pv
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: calibre-web-config-claim
+  namespace: calibre
+spec:
+  storageClassName: csi-rbd-sc
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: calibre
+  namespace: calibre
+  labels:
+    app: calibre
+spec:
+  selector:
+    app: calibre
+  type: LoadBalancer
+  loadBalancerIP: 192.168.10.9
+  ports:
+    - name: calibre-vnc
+      port: 8080
+    - name: calibre-web
+      port: 8081
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: calibre-web
+  namespace: calibre
+  labels:
+    app: calibre-web
+spec:
+  selector:
+    app: calibre-web
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  loadBalancerIP: 192.168.10.10
+  ports:
+    - name: calibre-web
+      port: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calibre
+  namespace: calibre
+spec:
+  selector:
+    matchLabels:
+      app: calibre
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      labels:
+        app: calibre
+    spec:
+      containers:
+      - name: calibre
+        image: linuxserver/calibre:7.20.0
+        env:
+          - name: DISABLE_IPV6
+            value: "true"
+        ports:
+        - containerPort: 8080
+          name: calibre-vnc
+        - containerPort: 8081
+          name: calibre-web
+        volumeMounts:
+        - name: calibre-media
+          mountPath: /config
+          subPath: books
+        startupProbe:
+          httpGet:
+            path: /
+            port: calibre-vnc
+          failureThreshold: 10
+          periodSeconds: 60
+      volumes:
+      - name: calibre-media
+        persistentVolumeClaim:
+          claimName: static-media-claim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calibre-web
+  namespace: calibre
+spec:
+  selector:
+    matchLabels:
+      app: calibre-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      labels:
+        app: calibre-web
+    spec:
+      containers:
+      - name: calibre-web
+        image: linuxserver/calibre-web:0.6.23
+        ports:
+        - containerPort: 8083
+          name: calibre-web
+        env:
+        - name: DOCKER_MODS
+          value: "linuxserver/mods:universal-calibre"
+        volumeMounts:
+        - name: calibre-web-config
+          mountPath: /config
+        - name: calibre-media
+          mountPath: /books
+          subPath: books
+        startupProbe:
+          httpGet:
+            path: /
+            port: calibre-web
+          failureThreshold: 10
+          periodSeconds: 60
+      volumes:
+      - name: calibre-web-config
+        persistentVolumeClaim:
+          claimName: calibre-web-config-claim
+      - name: calibre-media
+        persistentVolumeClaim:
+          claimName: static-media-claim
