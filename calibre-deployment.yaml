@@ -25,12 +25,14 @@ metadata:
   name: calibre-web-config-claim
   namespace: calibre
 spec:
-  storageClassName: csi-rbd-sc
+  storageClassName: ""
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
+  volumeMode: Filesystem
+  volumeName: calibre-web-config-static-pv
 ---
 kind: Service
 apiVersion: v1

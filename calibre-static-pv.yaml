@@ -26,3 +26,30 @@ spec:
     volumeHandle: calibre-media-static-pv
   persistentVolumeReclaimPolicy: Retain
   volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: calibre-web-config-static-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  csi:
+    driver: rbd.csi.ceph.com
+    nodeStageSecretRef:
+      # node stage secret name
+      name: csi-rbd-secret
+      # node stage secret namespace where above secret is created
+      namespace: ceph-system
+    volumeAttributes:
+      # Required options from storageclass parameters need to be added in volumeAttributes
+      "clusterID": "75990333-6483-4bcc-a0ce-649258b3300b"
+      "pool": "kubernetes"
+      "imageFeatures": "layering"
+      "staticVolume": "true"
+    # volumeHandle should be the same as the rbd image ID
+    volumeHandle: calibre-web-config-static-pv
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem
